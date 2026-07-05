@@ -15,7 +15,7 @@ spec:
         restartPolicy: Never
         containers:
         - name: teams-scaler
-          image: local/teams-scaler:v1
+          image: niroshan009/teams-scaler
           env:
             - name: SPARK_HOME
               value: "/opt/spark"
