@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teams-scaler-deployment
+  namespace: spark
+  labels:
+    app: teams-scaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teams-scaler
+  template:
+    metadata:
+      labels:
+        app: teams-scaler
+    spec:
+      serviceAccountName: spark-sa
+      containers:
+        - name: teams-scaler-container
+          image: local/teams-scaler:v1
+          ports:
+            - containerPort: 8082
+          # Defining environment variables here
+          env:
+            - name: SPARK_HOME
+              value: "/opt/spark"
+            - name: KAFKA_BOOTSTRAP_SERVER
+              value: "host.orb.internal:29092"
+            - name: SPARK_MASTER
+              value: "k8s://https://kubernetes.default.svc:443"
+            - name: SPARK_IMAGE
+              value: "local/spark-ignite:v1"
+            - name: SPARK_S3_URL
+              value: "http://rustfs.orb.local:9000"
+            - name: SPARK_DEPLOY_MODE
+              value: "cluster"
+            - name: SPARK_CATALOG_URL
+              value: "http://iceberg-rest.orb.local:8181"
