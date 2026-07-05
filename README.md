@@ -23,7 +23,7 @@ Intend to run team-scaler alongside the KEDA ScaledJob to reduce resource consum
 - KEDA [Installation guid](https://keda.sh/docs/2.20/deploy/)
 
 >### 💡 Note
-> This project has a dependency with [spark-ignite](https://github.com/niroshan009/ignite-spark) which will process the data in spark. Not necessary to build locally 
+> This project has a dependency with [ignite-spark](https://github.com/niroshan009/ignite-spark) which will process the data in spark. Not necessary to build locally 
 
 ### 🔨 Building
 

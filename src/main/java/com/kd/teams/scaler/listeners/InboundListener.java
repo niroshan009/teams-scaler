@@ -74,7 +74,7 @@ public class InboundListener {
 
             // submit the spark job to k8s cluster
             SparkLauncher launcher = new SparkLauncher()
-                    .setAppName("spark-ignite-ingest-inbound")
+                    .setAppName("ignite-spark-ingest-inbound")
                     .setMaster(master)
                     .setDeployMode(deployMode)
                     .setSparkHome(sparkHome)
@@ -82,15 +82,14 @@ public class InboundListener {
                     .setAppResource("local:///opt/spark/work/ignite-spark-1.0.jar")
                     .setConf("spark.kubernetes.executor.deleteOnTermination", "false")
                     .setConf("spark.kubernetes.container.image", image)
-                    .setConf("spark.kubernetes.container.image.pullPolicy", "Never")
+                    .setConf("spark.kubernetes.container.image.pullPolicy", "IfNotPresent")
                     .setConf("spark.kubernetes.namespace", "spark")
                     .setConf("spark.kubernetes.authenticate.driver.serviceAccountName", "spark-sa")
                     .setConf("spark.kubernetes.driverEnv.SPARK_CLASS", mainClass)
                     .setConf("spark.kubernetes.driverEnv.S3_URL", s3Url)
                     .setConf("spark.kubernetes.driverEnv.CATALOG_URL", catalogUrl)
                     .setConf("spark.kubernetes.driverEnv.FILE_NAME", actualFileName)
-                    .setConf("spark.kubernetes.file.upload.path", "local:///tmp")
-                    .setConf("spark.kubernetes.container.image.pullPolicy", "Never");
+                    .setConf("spark.kubernetes.file.upload.path", "local:///tmp");
 
             SparkAppHandle handle = launcher.startApplication();
 

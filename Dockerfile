@@ -22,7 +22,7 @@ ENV KAFKA_BOOTSTRAP_SERVER=http://kafka-broker.orb.local:29092
 ENV SPARK_HOME=/opt/spark
 ENV SPARK_DEPLOY_MODE=cluster
 ENV SPARK_MASTER=k8s://https://kubernetes.default.svc:443
-ENV SPARK_IMAGE=local/spark-ignite:v1
+ENV SPARK_IMAGE=niroshan009/ignite-spark:latest
 ENV SPARK_S3_URL=http://rustfs.orb.local:9000
 ENV SPARK_CATALOG_URL=http://iceberg-rest.orb.local:8181
 
