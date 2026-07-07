@@ -100,18 +100,21 @@ public class InboundListener {
                 public void stateChanged(SparkAppHandle h) {
                     log.info("Logging the state {}", h.getState());
                     log.info("Logging the app id {}", h.getAppId());
-                    ack.acknowledge();
 
                     h.getError()
                             .ifPresentOrElse(error -> {
-                                        log.error("unable to process the file {}, due to error {}", actualFileName, error.getMessage());
+                                        ack.acknowledge();
+                                        log.error("unable to process the file: {}, due to error: {}", actualFileName, error.getMessage());
 
                                         FileProcessEvent fileProcessEvent = new FileProcessEvent(actualFileName, "FAILURE");
                                         ProducerRecord<String, FileProcessEvent> fileProcessEventProducerRecord = new ProducerRecord<>("inbound.spark.job.failure", fileProcessEvent);
                                         kafkaTemplate.send(fileProcessEventProducerRecord);
-                                        initiateGracefulShutdown(1);
+
+                                        log.info("sending acknowledgement after failure");
+                                        initiateGracefulShutdown(0);
                                     },
                                     () -> {
+                                        ack.acknowledge();
                                         log.info("file processes successfully for file {}", actualFileName);
                                         FileProcessEvent fileProcessEvent = new FileProcessEvent(actualFileName, "SUCCESS");
                                         ProducerRecord<String, FileProcessEvent> fileProcessEventProducerRecord = new ProducerRecord<>("inbound.spark.job.success", fileProcessEvent);

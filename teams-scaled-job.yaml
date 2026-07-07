@@ -44,9 +44,9 @@ spec:
       topic: rustfs.inbound.upload.topic
       consumerGroup: keda-inbound-trigger-group
       lagThreshold: '1'
-      activationLagThreshold: '1'
-      allowZeroLagExporter: "true"
+      activationLagThreshold: '0'
+      allowZeroLagExporter: 'true'
       offsetResetPolicy: earliest
-      allowIdleConsumers: "true"
-      scaleToZeroOnInvalidOffset: "false"
+      allowIdleConsumers: 'true'
+      scaleToZeroOnInvalidOffset: 'false'
 
