@@ -30,17 +30,53 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - CLUSTER_ID=MkU3OEVBNTcwNTg0M2U0M2
-      # - KAFKA_LOG4J_ROOT_LOGLEVEL=INFO
-      # - KAFKA_LOG4J_LOGGERS=kafka=INFO,org.apache.kafka=INFO
+      - KAFKA_LOG4J_ROOT_LOGLEVEL=INFO
+      - KAFKA_LOG4J_LOGGERS=kafka=INFO,org.apache.kafka=INFO
     networks:
       - iceberg_net
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
-  # node1:
-  #   <<: *ignite-def
-  #   command: --node-name node1
-  #   ports:
-  #     - "10300:10300"
-  #     - "10800:10800"
+  init-kafka:
+    image: confluentinc/cp-kafka:7.4.0  # Kept at 7.4.0 to match your broker version
+    depends_on:
+      kafka-broker:
+        condition: service_healthy  # Leverages your broker's healthcheck
+    networks:
+      - iceberg_net
+    working_dir: /tmp
+    environment:
+      LOG_DIR: "/tmp"  # Redirects logs to a world-writab
+    entrypoint: [ "sh", "-c" ]
+    command: |
+      "
+      echo 'Waiting for Kafka broker to accept connections...'
+      cub kafka-ready -b kafka-broker:9092 1 30
+      
+      echo 'Creating Kafka topics...'
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic rustfs.inbound.upload.topic
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.failure
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.success
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic iceberg.raw.created.topic
+      
+      echo 'Topics created successfully!'
+      "
+  node1:
+    <<: *ignite-def
+    command: --node-name node1
+    ports:
+      - "10300:10300"
+      - "10800:10800"
+  node2:
+    <<: *ignite-def
+    command: --node-name node2
+    ports:
+      - "10301:10300"
+      - "10801:10800"
   spark-iceberg:
     image: tabulario/spark-iceberg
     container_name: spark-iceberg
@@ -90,9 +126,22 @@ services:
       - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
       - RUSTFS_CONSOLE_ENABLE=true
       - RUSTFS_NOTIFY_ENABLE=true
+      - RUSTFS_OUTBOUND_ALLOW_ORIGINS=kafka-broker:9092
+      - RUSTFS_NOTIFY_KAFKA_ENABLE_PRIMARY=on
+      - RUSTFS_NOTIFY_KAFKA_BROKERS_PRIMARY=kafka-broker:9092
+      - RUSTFS_NOTIFY_KAFKA_TOPIC_PRIMARY=rustfs.inbound.upload.topic
+      - RUSTFS_NOTIFY_KAFKA_QUEUE_DIR_PRIMARY=/data/.events_queue
 
+      - RUSTFS_NOTIFY_KAFKA_ENABLE_SECONDARY=on
+      - RUSTFS_NOTIFY_KAFKA_BROKERS_SECONDARY=kafka-broker:9092
+      - RUSTFS_NOTIFY_KAFKA_TOPIC_SECONDARY=iceberg.raw.created.topic
+      - RUSTFS_NOTIFY_KAFKA_QUEUE_DIR_SECONDARY=/data/.events_queue
     networks:
       - iceberg_net
+    depends_on:
+      kafka-broker:
+        condition: service_healthy
+#      - rest
     ports:
       - 9001:9001
       - 9000:9000
@@ -122,6 +171,10 @@ services:
       /usr/bin/mc rm -r --force rustfs/checkpoint;
       /usr/bin/mc mb rustfs/checkpoint;
       /usr/bin/mc policy set public rustfs/checkpoint;
+      
+      /usr/bin/mc event add rustfs/inbound arn:rustfs:sqs:us-east-1:primary:kafka --event put;
+      /usr/bin/mc event add rustfs/warehouse arn:rustfs:sqs:us-east-1:secondary:kafka --event put;
+
       echo "Done!"
       "
 networks:
@@ -133,6 +186,6 @@ configs:
       ignite {
         network {
           port: 3344
-          nodeFinder.netClusterNodes = ["node1:3344"]
+          nodeFinder.netClusterNodes = ["node1:3344","node2:3344"]
         }
       }
