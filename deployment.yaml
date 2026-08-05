@@ -18,7 +18,7 @@ spec:
       serviceAccountName: spark-sa
       containers:
         - name: teams-scaler-container
-          image: local/teams-scaler:v1
+          image: local/teams-scaler:latest
           ports:
             - containerPort: 8082
           env:
@@ -36,3 +36,5 @@ spec:
               value: "cluster"
             - name: SPARK_CATALOG_URL
               value: "http://iceberg-rest.orb.local:8181"
+            - name: IGNITE_ENDPOINT
+              value: "jdbc:ignite:thin://teams-scaler-node1-1.orb.local:10800,teams-scaler-node2-1.orb.local:10801/"

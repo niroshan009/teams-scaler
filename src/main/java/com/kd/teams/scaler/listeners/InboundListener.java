@@ -25,7 +25,7 @@ import java.io.IOException;
 public class InboundListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InboundListener.class);
-    private static final String RUSTFS_INBOUND_UPLOAD_TOPIC = "rustfs.inbound.upload.topic";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Value("${spark.home}")
     private String sparkHome;
@@ -39,6 +39,8 @@ public class InboundListener {
     private String s3Url;
     @Value("${spark.catalog.url}")
     private String catalogUrl;
+    @Value("${ignite.endpoint}")
+    private String igniteEndpoint;
 
     @Autowired
     private KafkaTemplate<String, FileProcessEvent> kafkaTemplate;
@@ -46,10 +48,10 @@ public class InboundListener {
     @Autowired
     private ApplicationContext context;
 
-    @KafkaListener(topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group", concurrency = "1")
-    public void listen(String rawJson, Acknowledgment ack) throws IOException {
+    @KafkaListener(id = "inboundlistener", topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group", concurrency = "1")
+    public void listenInbound(String rawJson, Acknowledgment ack) throws IOException {
         JsonNode root = objectMapper.readTree(rawJson);
-        String mainClass = "com.kd.utility.ImportData";
+        String mainClass = "com.kd.ImportData";
         System.out.println("Received: ");
         JsonNode recordsArray = root.path("Records");
         if (recordsArray.isArray() && !recordsArray.isEmpty()) {
@@ -131,6 +133,74 @@ public class InboundListener {
         }
     }
 
+
+    @KafkaListener(id = "iceberglistner", topics = "iceberg.raw.created.topic", groupId = "keda-iceberg-trigger-group", concurrency = "1")
+    public void listenInputCreated(String rawJson, Acknowledgment ack) throws IOException {
+        JsonNode root = objectMapper.readTree(rawJson);
+
+        String mainClass = "com.kd.EnrichData";
+        System.out.println("Received: ");
+        JsonNode recordsArray = root.path("Key");
+        String s = recordsArray.asText();
+        log.info("--- Extracted target path details ---");
+        log.info("Processing snapshot: {}{}", "\t".repeat(3), s);
+        log.info("--- Environment Variables ---");
+        log.info("Spark Home: {}{}", "\t".repeat(3), sparkHome);
+        log.info("Deploy Mode: {}{}", "\t".repeat(3), deployMode);
+        log.info("Main Class: {}{}", "\t".repeat(3), mainClass);
+        log.info("Master: {}{}", "\t".repeat(3), master);
+        log.info("Image: {}{}", "\t".repeat(3), image);
+        log.info("S3 URL: {}{}", "\t".repeat(3), s3Url);
+        log.info("Catalog URL: {}{}", "\t".repeat(3), catalogUrl);
+
+        // submit the spark job to k8s cluster
+        SparkLauncher launcher = new SparkLauncher()
+                .setAppName("ignite-spark-enrich")
+                .setMaster(master)
+                .setDeployMode(deployMode)
+                .setSparkHome(sparkHome)
+                .setMainClass(mainClass)
+                .setAppResource("local:///opt/spark/work/ignite-spark-1.0.jar")
+                .setConf("spark.kubernetes.executor.deleteOnTermination", "false")
+                .setConf("spark.kubernetes.container.image", image)
+                .setConf("spark.kubernetes.container.image.pullPolicy", "IfNotPresent")
+                .setConf("spark.kubernetes.namespace", "spark")
+                .setConf("spark.kubernetes.authenticate.driver.serviceAccountName", "spark-sa")
+                .setConf("spark.kubernetes.driverEnv.SPARK_CLASS", mainClass)
+                .setConf("spark.kubernetes.driverEnv.S3_URL", s3Url)
+                .setConf("spark.kubernetes.driverEnv.CATALOG_URL", catalogUrl)
+                .setConf("spark.kubernetes.driverEnv.IGNITE_ENDPOINT", igniteEndpoint)
+                .setConf("spark.kubernetes.file.upload.path", "local:///tmp");
+
+
+        SparkAppHandle handle = launcher.startApplication();
+
+        handle.addListener(new SparkAppHandle.Listener() {
+            @Override
+            public void stateChanged(SparkAppHandle h) {
+                log.info("Logging the state {}", h.getState());
+                log.info("Logging the app id {}", h.getAppId());
+
+                h.getError()
+                        .ifPresentOrElse(error -> {
+                                    ack.acknowledge();
+                                    log.info("sending acknowledgement after error");
+                                    initiateGracefulShutdown(0);
+                                },
+                                () -> {
+                                    ack.acknowledge();
+                                    log.info("sending acknowledgement after success");
+                                    initiateGracefulShutdown(0);
+                                });
+            }
+
+            @Override
+            public void infoChanged(SparkAppHandle h) {
+            }
+        });
+
+
+    }
 
     private void initiateGracefulShutdown(int exitCode) {
         LOGGER.info("Initiating graceful shutdown sequence with exit code: {}", exitCode);

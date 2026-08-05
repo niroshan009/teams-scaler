@@ -54,8 +54,9 @@ Run below commands:
 * `kubectl create namespace spark` : create a spark namespace to run application and create spak jobs
 * `kubectl apply -f spark-service-account.yaml` : create service account to run teams-scaler pods and submit spark jobs to spark namespace
 * `kubectl apply -f teams-scaled-job.yaml` : create KEDA scaled jobs to handle Kafka events
-* create below 3 topics in the kafka to handle events
+* create below 4 topics in the kafka to handle events
   * `rustfs.inbound.upload.topic` : receives file upload events from Rustfs
   * `inbound.spark.job.failure` : publish events upon file processing success
   * `inbound.spark.job.success` : publish events upon file processing failure
+  * `iceberg.raw.created.topic` : receives raw data created events from Rustfs
 
