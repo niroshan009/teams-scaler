@@ -150,7 +150,7 @@ services:
       - rustfs
     image: minio/mc
     container_name: mc
-    restart: "no" 
+    restart: "no"
     networks:
       - iceberg_net
     environment:
@@ -173,7 +173,7 @@ services:
       /usr/bin/mc policy set public rustfs/checkpoint;
 
       /usr/bin/mc event add rustfs/inbound arn:rustfs:sqs:us-east-1:primary:kafka --event put;
-      /usr/bin/mc event add rustfs/warehouse arn:rustfs:sqs:us-east-1:secondary:kafka --event put;
+      /usr/bin/mc event add rustfs/warehouse arn:rustfs:sqs:us-east-1:secondary:kafka --event put --prefix "db/teams/metadata/snap-" --suffix ".avro";
 
       echo "Done!"
       "
