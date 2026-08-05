@@ -56,13 +56,13 @@ services:
       "
       echo 'Waiting for Kafka broker to accept connections...'
       cub kafka-ready -b kafka-broker:9092 1 30
-      
+
       echo 'Creating Kafka topics...'
       kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic rustfs.inbound.upload.topic
       kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.failure
       kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.success
       kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic iceberg.raw.created.topic
-      
+
       echo 'Topics created successfully!'
       "
   node1:
@@ -171,7 +171,7 @@ services:
       /usr/bin/mc rm -r --force rustfs/checkpoint;
       /usr/bin/mc mb rustfs/checkpoint;
       /usr/bin/mc policy set public rustfs/checkpoint;
-      
+
       /usr/bin/mc event add rustfs/inbound arn:rustfs:sqs:us-east-1:primary:kafka --event put;
       /usr/bin/mc event add rustfs/warehouse arn:rustfs:sqs:us-east-1:secondary:kafka --event put;
 
