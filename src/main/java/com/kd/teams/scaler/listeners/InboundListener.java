@@ -41,6 +41,8 @@ public class InboundListener {
     private String catalogUrl;
     @Value("${ignite.endpoint}")
     private String igniteEndpoint;
+    @Value("${spark.appname}")
+    private String appName;
 
     @Autowired
     private KafkaTemplate<String, FileProcessEvent> kafkaTemplate;
@@ -48,7 +50,9 @@ public class InboundListener {
     @Autowired
     private ApplicationContext context;
 
-    @KafkaListener(id = "inboundlistener", topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group", concurrency = "1")
+    @KafkaListener(id = "inboundbucketlistener", topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group",
+            autoStartup = "${kafka.listener.inbound.enabled:true}" ,
+            concurrency = "1")
     public void listenInbound(String rawJson, Acknowledgment ack) throws IOException {
         JsonNode root = objectMapper.readTree(rawJson);
         String mainClass = "com.kd.ImportData";
@@ -73,15 +77,17 @@ public class InboundListener {
             log.info("Image: {}{}", "\t".repeat(3), image);
             log.info("S3 URL: {}{}", "\t".repeat(3), s3Url);
             log.info("Catalog URL: {}{}", "\t".repeat(3), catalogUrl);
+            log.info("App Name: {}{}", "\t".repeat(3), appName);
 
             // submit the spark job to k8s cluster
             SparkLauncher launcher = new SparkLauncher()
-                    .setAppName("ignite-spark-ingest-inbound")
+                    .setAppName(appName)
                     .setMaster(master)
                     .setDeployMode(deployMode)
                     .setSparkHome(sparkHome)
                     .setMainClass(mainClass)
                     .setAppResource("local:///opt/spark/work/ignite-spark-1.0.jar")
+                    .setConf("spark.executor.instances", "1")
                     .setConf("spark.kubernetes.executor.deleteOnTermination", "false")
                     .setConf("spark.kubernetes.container.image", image)
                     .setConf("spark.kubernetes.container.image.pullPolicy", "IfNotPresent")
@@ -91,6 +97,7 @@ public class InboundListener {
                     .setConf("spark.kubernetes.driverEnv.S3_URL", s3Url)
                     .setConf("spark.kubernetes.driverEnv.CATALOG_URL", catalogUrl)
                     .setConf("spark.kubernetes.driverEnv.FILE_NAME", actualFileName)
+                    .setConf("spark.kubernetes.driverEnv.APP_NAME", appName)
                     .setConf("spark.kubernetes.file.upload.path", "local:///tmp");
 
             SparkAppHandle handle = launcher.startApplication();
@@ -134,7 +141,9 @@ public class InboundListener {
     }
 
 
-    @KafkaListener(id = "iceberglistner", topics = "iceberg.raw.created.topic", groupId = "keda-iceberg-trigger-group", concurrency = "1")
+    @KafkaListener(id = "iceberglistner", topics = "iceberg.raw.created.topic", groupId = "keda-inbound-trigger-group",
+            autoStartup = "${kafka.listener.iceberg.enabled:true}" ,
+            concurrency = "1")
     public void listenInputCreated(String rawJson, Acknowledgment ack) throws IOException {
         JsonNode root = objectMapper.readTree(rawJson);
 
@@ -152,15 +161,17 @@ public class InboundListener {
         log.info("Image: {}{}", "\t".repeat(3), image);
         log.info("S3 URL: {}{}", "\t".repeat(3), s3Url);
         log.info("Catalog URL: {}{}", "\t".repeat(3), catalogUrl);
+        log.info("App Name: {}{}", "\t".repeat(3), appName);
 
         // submit the spark job to k8s cluster
         SparkLauncher launcher = new SparkLauncher()
-                .setAppName("ignite-spark-enrich")
+                .setAppName(appName)
                 .setMaster(master)
                 .setDeployMode(deployMode)
                 .setSparkHome(sparkHome)
                 .setMainClass(mainClass)
                 .setAppResource("local:///opt/spark/work/ignite-spark-1.0.jar")
+                .setConf("spark.executor.instances", "1")
                 .setConf("spark.kubernetes.executor.deleteOnTermination", "false")
                 .setConf("spark.kubernetes.container.image", image)
                 .setConf("spark.kubernetes.container.image.pullPolicy", "IfNotPresent")
@@ -170,6 +181,7 @@ public class InboundListener {
                 .setConf("spark.kubernetes.driverEnv.S3_URL", s3Url)
                 .setConf("spark.kubernetes.driverEnv.CATALOG_URL", catalogUrl)
                 .setConf("spark.kubernetes.driverEnv.IGNITE_ENDPOINT", igniteEndpoint)
+                .setConf("spark.kubernetes.driverEnv.APP_NAME", appName)
                 .setConf("spark.kubernetes.file.upload.path", "local:///tmp");
 
 

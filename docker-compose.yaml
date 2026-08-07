@@ -3,6 +3,8 @@ x-ignite-def: &ignite-def
   environment:
     JVM_MAX_MEM: "1g"
     JVM_MIN_MEM: "1g"
+  volumes:
+    - ./src/main/resources/reference.csv:/opt/ignite/data/reference.csv:ro
   configs:
     - source: node_config
       target: /opt/ignite/etc/ignite-config.conf
@@ -68,15 +70,21 @@ services:
   node1:
     <<: *ignite-def
     command: --node-name node1
+    networks:
+      - iceberg_net
     ports:
       - "10300:10300"
       - "10800:10800"
-  node2:
-    <<: *ignite-def
-    command: --node-name node2
-    ports:
-      - "10301:10300"
-      - "10801:10800"
+  cli:
+    image: apacheignite/ignite:3.1.0
+    profiles:
+      - tools
+    stdin_open: true
+    tty: true
+    network_mode: host
+    volumes:
+      - ./sql:/opt/ignite/downloads
+    command: cli
   spark-iceberg:
     image: tabulario/spark-iceberg
     container_name: spark-iceberg
@@ -186,6 +194,6 @@ configs:
       ignite {
         network {
           port: 3344
-          nodeFinder.netClusterNodes = ["node1:3344","node2:3344"]
+          nodeFinder.netClusterNodes = ["node1:3344"]
         }
       }
