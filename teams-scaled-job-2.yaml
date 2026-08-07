@@ -1,0 +1,63 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: iceberg-scaler
+  namespace: spark
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    activeDeadlineSeconds: 1800
+    backoffLimit: 1
+    template:
+      spec:
+        serviceAccountName: spark-sa
+        restartPolicy: Never
+        containers:
+        - name: iceberg-scaler
+          image: local/teams-scaler:latest
+          imagePullPolicy: IfNotPresent  # <- Forces OrbStack to look locally first
+          env:
+            - name: SPARK_HOME
+              value: "/opt/spark"
+            - name: KAFKA_BOOTSTRAP_SERVER
+              value: "host.orb.internal:29092"
+            - name: SPARK_MASTER
+              value: "k8s://https://kubernetes.default.svc:443"
+            - name: SPARK_IMAGE
+              value: "local/ignite-spark:latest"
+            - name: SPARK_S3_URL
+              value: "http://rustfs.orb.local:9000"
+            - name: SPARK_DEPLOY_MODE
+              value: "cluster"
+            - name: SPARK_CATALOG_URL
+              value: "http://iceberg-rest.orb.local:8181"
+            - name: IGNITE_ENDPOINT
+              value: "jdbc:ignite:thin://teams-scaler-node1-1.orb.local:10800/"
+            - name: ACTIVE_WORKLOAD
+              value: "ICEBERG_ONLY"
+            - name: KAFKA_LISTENER_ICEBERG_ENABLED
+              value: "true"  # BLOCK this client
+            - name: KAFKA_LISTENER_INBOUND_ENABLED
+              value: "false"
+            - name: APP_NAME
+              value: "iceberg-app"
+
+
+  pollingInterval: 10
+  maxReplicaCount: 1
+  successfulJobsHistoryLimit: 8
+  failedJobsHistoryLimit: 4
+
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: host.orb.internal:29092
+      topic: iceberg.raw.created.topic
+      consumerGroup: keda-inbound-trigger-group
+      lagThreshold: '1'
+      activationLagThreshold: '0'
+      allowZeroLagExporter: 'true'
+      offsetResetPolicy: earliest
+      allowIdleConsumers: 'true'
+      scaleToZeroOnInvalidOffset: 'false'
