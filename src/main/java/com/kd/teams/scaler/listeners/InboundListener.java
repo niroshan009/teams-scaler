@@ -50,7 +50,7 @@ public class InboundListener {
     @Autowired
     private ApplicationContext context;
 
-    @KafkaListener(id = "inboundbucketlistener", topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group",
+    @KafkaListener(topics = "rustfs.inbound.upload.topic", groupId = "keda-inbound-trigger-group",
             autoStartup = "${kafka.listener.inbound.enabled:true}" ,
             concurrency = "1")
     public void listenInbound(String rawJson, Acknowledgment ack) throws IOException {
@@ -141,7 +141,7 @@ public class InboundListener {
     }
 
 
-    @KafkaListener(id = "iceberglistner", topics = "iceberg.raw.created.topic", groupId = "keda-inbound-trigger-group",
+    @KafkaListener( topics = "iceberg.raw.created.topic", groupId = "keda-inbound-trigger-group",
             autoStartup = "${kafka.listener.iceberg.enabled:true}" ,
             concurrency = "1")
     public void listenInputCreated(String rawJson, Acknowledgment ack) throws IOException {

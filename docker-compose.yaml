@@ -60,10 +60,10 @@ services:
       cub kafka-ready -b kafka-broker:9092 1 30
 
       echo 'Creating Kafka topics...'
-      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic rustfs.inbound.upload.topic
-      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.failure
-      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic inbound.spark.job.success
-      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 3 --replication-factor 1 --topic iceberg.raw.created.topic
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 1 --replication-factor 1 --topic rustfs.inbound.upload.topic
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 1 --replication-factor 1 --topic inbound.spark.job.failure
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 1 --replication-factor 1 --topic inbound.spark.job.success
+      kafka-topics --create --if-not-exists --bootstrap-server kafka-broker:9092 --partitions 1 --replication-factor 1 --topic iceberg.raw.created.topic
 
       echo 'Topics created successfully!'
       "
