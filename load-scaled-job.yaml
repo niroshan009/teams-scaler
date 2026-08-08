@@ -1,7 +1,7 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledJob
 metadata:
-  name: inbound-scaler
+  name: load-scaled-job
   namespace: spark
 spec:
   jobTargetRef:
@@ -14,7 +14,7 @@ spec:
         serviceAccountName: spark-sa
         restartPolicy: Never
         containers:
-        - name: inbound-scaler
+        - name: load-scaled-job
           image: local/teams-scaler:latest
           imagePullPolicy: IfNotPresent  # <- Forces OrbStack to look locally first
           env:
@@ -41,7 +41,7 @@ spec:
             - name: KAFKA_LISTENER_INBOUND_ENABLED
               value: "true"
             - name: APP_NAME
-              value: "inbound-app"
+              value: "load-data-app"
 
 
   pollingInterval: 10

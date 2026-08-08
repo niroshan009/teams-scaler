@@ -1,7 +1,7 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledJob
 metadata:
-  name: iceberg-scaler
+  name: enrich-scaled-job
   namespace: spark
 spec:
   jobTargetRef:
@@ -14,7 +14,7 @@ spec:
         serviceAccountName: spark-sa
         restartPolicy: Never
         containers:
-        - name: iceberg-scaler
+        - name: enrich-scaled-job
           image: local/teams-scaler:latest
           imagePullPolicy: IfNotPresent  # <- Forces OrbStack to look locally first
           env:
@@ -41,7 +41,7 @@ spec:
             - name: KAFKA_LISTENER_INBOUND_ENABLED
               value: "false"
             - name: APP_NAME
-              value: "iceberg-app"
+              value: "enrich-app"
 
 
   pollingInterval: 10
