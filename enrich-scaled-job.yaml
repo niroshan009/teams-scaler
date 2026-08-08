@@ -33,7 +33,7 @@ spec:
             - name: SPARK_CATALOG_URL
               value: "http://iceberg-rest.orb.local:8181"
             - name: IGNITE_ENDPOINT
-              value: "jdbc:ignite:thin://teams-scaler-node1-1.orb.local:10800/"
+              value: "jdbc:ignite:thin://teams-scaler-node1-1.orb.local:10800,teams-scaler-node2-1.orb.local:10800/"
             - name: ACTIVE_WORKLOAD
               value: "ICEBERG_ONLY"
             - name: KAFKA_LISTENER_ICEBERG_ENABLED
